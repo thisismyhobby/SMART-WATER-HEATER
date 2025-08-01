@@ -1,1 +1,83 @@
-THIS IS THE CODE FOR SMART WATER HEATER USING ESP32
+#include <OneWire.h>
+#include <DallasTemperature.h>
+
+// Pin Definitions
+#define TEMP_SENSOR_PIN 25
+#define RELAY_PIN 4
+#define LED_PIN 2
+#define BUZZER_PIN 15
+#define SWITCH_PIN 5  
+
+// Temperature Thresholds
+#define IDLE_THRESHOLD 0.0
+#define HEATING_THRESHOLD 38.0
+#define STABILIZING_THRESHOLD 45.0
+#define TARGET_REACHED_THRESHOLD 46.0
+#define OVERHEAT_THRESHOLD 50.0
+
+//STABILIZING_THRESHOLD is equal to TARGET_REACHED_THRESHOLD AS THE TARGET_REACHED_THRESHOLD CAN BE MODIFIED ACCORDING TO  USERS NEEDS
+OneWire oneWire(TEMP_SENSOR_PIN);
+DallasTemperature sensors(&oneWire);
+
+void setup() {
+  Serial.begin(115200);
+  sensors.begin();
+
+  pinMode(RELAY_PIN, OUTPUT);
+  pinMode(LED_PIN, OUTPUT);
+  pinMode(BUZZER_PIN, OUTPUT);
+  pinMode(SWITCH_PIN, INPUT_PULLUP);  
+
+  digitalWrite(RELAY_PIN, LOW);
+  digitalWrite(LED_PIN, LOW);
+  digitalWrite(BUZZER_PIN, LOW);
+
+  Serial.println("System Initialized. Flip switch ON to begin heating...");
+}
+
+void loop() {
+  bool switchState = digitalRead(SWITCH_PIN) == HIGH;
+
+  if (switchState) {
+    sensors.requestTemperatures();
+    float tempC = sensors.getTempCByIndex(0);
+
+    Serial.print("Temperature: ");
+    Serial.print(tempC);
+    Serial.print(" °C | ");
+
+    if (tempC < IDLE_THRESHOLD) {
+      Serial.println("State: IDLE");
+      digitalWrite(RELAY_PIN, LOW);
+      digitalWrite(LED_PIN, LOW);
+      digitalWrite(BUZZER_PIN, LOW);
+
+    } else if (tempC < HEATING_THRESHOLD) {
+      Serial.println("State: HEATING");
+      digitalWrite(RELAY_PIN, HIGH);  
+      digitalWrite(LED_PIN, HIGH);
+      digitalWrite(BUZZER_PIN, LOW);
+
+    } else if (tempC < TARGET_REACHED_THRESHOLD) {
+      Serial.println("State: TARGET REACHED");
+      digitalWrite(RELAY_PIN, LOW);
+      digitalWrite(LED_PIN, LOW);
+      digitalWrite(BUZZER_PIN, LOW);
+
+    } else if (tempC >= OVERHEAT_THRESHOLD) {
+      Serial.println("State: OVERHEAT!");
+      digitalWrite(RELAY_PIN, LOW);
+      digitalWrite(LED_PIN, LOW);
+      digitalWrite(BUZZER_PIN, HIGH);
+    }
+
+  } else {
+    
+    Serial.println("State: IDLE");
+    digitalWrite(RELAY_PIN, LOW);
+    digitalWrite(LED_PIN, LOW);
+    digitalWrite(BUZZER_PIN, LOW);
+  }
+
+  delay(100);
+}
